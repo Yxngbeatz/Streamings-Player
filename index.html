@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPTV Player Pro - Inspirado no Smarters</title>
+    <!-- Tailwind CSS para Estilização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#0f172a',
+                            card: '#1e293b',
+                            primary: '#3b82f6',
+                            hover: '#2563eb'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome para Ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- HLS.js para reprodução de streams HLS (.m3u8) -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body class="bg-brand-dark text-slate-100 font-sans min-h-screen flex flex-col">
+
+    <!-- TELA DE LOGIN -->
+    <div id="login-screen" class="flex-1 flex items-center justify-center p-4">
+        <div class="bg-brand-card w-full max-w-md p-8 rounded-2xl shadow-2xl border border-slate-800">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600/20 text-blue-500 rounded-2xl mb-4 text-2xl">
+                    <i class="fa-solid fa-tv"></i>
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight">IPTV Player Lite</h1>
+                <p class="text-sm text-slate-400 mt-1">Insira os dados da sua lista ou API</p>
+            </div>
+
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Nome da Lista</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500"><i class="fa-solid fa-signature"></i></span>
+                        <input type="text" id="playlist-name" placeholder="Ex: Minha Lista" required class="w-full bg-slate-900 border border-slate-700 rounded-lg py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-blue-500 transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">URL da Lista M3U ou Xtream API</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500"><i class="fa-solid fa-link"></i></span>
+                        <input type="url" id="playlist-url" placeholder="http://exemplo.com:8080/get.php?..." required class="w-full bg-slate-900 border border-slate-700 rounded-lg py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-blue-500 transition">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> Conectar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- DASHBOARD PRINCIPAL (Oculto Inicialmente) -->
+    <div id="dashboard-screen" class="hidden flex-1 flex flex-col">
+        <!-- Barra Superior -->
+        <header class="bg-brand-card border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600/20 text-blue-500 rounded-xl flex items-center justify-center">
+                    <i class="fa-solid fa-tv"></i>
+                </div>
+                <span class="font-bold text-lg" id="display-playlist-name">Minha Lista</span>
+            </div>
+            <button onclick="logout()" class="text-slate-400 hover:text-red-400 text-sm font-medium flex items-center gap-2 transition">
+                <i class="fa-solid fa-power-off"></i> Sair
+            </button>
+        </header>
+
+        <!-- Conteúdo do Dashboard -->
+        <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Card Canais ao Vivo -->
+                <div onclick="openSection('live')" class="bg-brand-card hover:bg-slate-800/80 border border-slate-800 hover:border-blue-500/50 p-6 rounded-2xl cursor-pointer transition group shadow-lg">
+                    <div class="w-12 h-12 bg-blue-500/10 text-blue-500 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-satellite-dish"></i>
+                    </div>
+                    <h2 class="text-lg font-bold">Canais ao Vivo</h2>
+                    <p class="text-sm text-slate-400 mt-1">Assista aos canais de TV ao vivo da sua lista.</p>
+                </div>
+
+                <!-- Card Filmes (VOD) -->
+                <div onclick="openSection('movies')" class="bg-brand-card hover:bg-slate-800/80 border border-slate-800 hover:border-blue-500/50 p-6 rounded-2xl cursor-pointer transition group shadow-lg">
+                    <div class="w-12 h-12 bg-purple-500/10 text-purple-500 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-film"></i>
+                    </div>
+                    <h2 class="text-lg font-bold">Filmes (VOD)</h2>
+                    <p class="text-sm text-slate-400 mt-1">Explore os filmes disponíveis sob demanda.</p>
+                </div>
+
+                <!-- Card Séries -->
+                <div onclick="openSection('series')" class="bg-brand-card hover:bg-slate-800/80 border border-slate-800 hover:border-blue-500/50 p-6 rounded-2xl cursor-pointer transition group shadow-lg">
+                    <div class="w-12 h-12 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-clapperboard"></i>
+                    </div>
+                    <h2 class="text-lg font-bold">Séries</h2>
+                    <p class="text-sm text-slate-400 mt-1">Acompanhe suas temporadas e episódios favoritos.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- SCRIPT DE CONTROLE -->
+    <script>
+        function handleLogin(event) {
+            event.preventDefault();
+            const name = document.getElementById('playlist-name').value;
+            const url = document.getElementById('playlist-url').value;
+
+            // Salva na sessão / localStorage simples
+            localStorage.setItem('iptv_name', name);
+            localStorage.setItem('iptv_url', url);
+
+            // Alterna telas
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+            document.getElementById('display-playlist-name').innerText = name;
+        }
+
+        function logout() {
+            localStorage.clear();
+            document.getElementById('dashboard-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+        }
+
+        function openSection(type) {
+            alert(`Seção de ${type} selecionada! Aqui você integrará o leitor de listas M3U.`);
+        }
+
+        // Verifica se já existe sessão salva
+        window.onload = function() {
+            const savedName = localStorage.getItem('iptv_name');
+            if (savedName) {
+                document.getElementById('playlist-name').value = savedName;
+                document.getElementById('playlist-url').value = localStorage.getItem('iptv_url') || '';
+            }
+        }
+    </script>
+</body>
+</html>
